@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { PrismaClient } from '../generated/prisma/client'
+import { PrismaClient } from '@prisma/client'
 
 // Verify DATABASE_URL is set
 if (!process.env.DATABASE_URL) {

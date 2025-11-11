@@ -17,11 +17,6 @@ const nextConfig = {
     ],
     formats: ['image/webp', 'image/avif'],
   },
-  outputFileTracingIncludes: {
-    '/api/**/*': [
-      './generated/**/*',
-    ],
-  },
   experimental: {
     outputFileTracingExcludes: {
       '*': [
