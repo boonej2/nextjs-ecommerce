@@ -19,7 +19,7 @@ const nextConfig = {
   },
   outputFileTracingIncludes: {
     '/api/**/*': [
-      './generated/prisma/**/*',
+      './generated/**/*',
     ],
   },
   experimental: {
