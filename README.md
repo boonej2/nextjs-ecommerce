@@ -6,13 +6,15 @@ A modern, responsive e-commerce website built with Next.js 15, React, and TypeSc
 
 - **Next.js 15** with App Router for optimal performance
 - **TypeScript** for type safety and better developer experience
+- **NextAuth v5** for authentication with credentials provider
+- **Prisma** for database management with PostgreSQL
 - **Responsive Design** that works on all devices
 - **Static Site Generation** for fast loading times
 - **Shopping Cart** with localStorage persistence
 - **Product Catalog** with filtering and search
 - **Product Detail Pages** with dynamic routing
 - **Contact Form** with validation
-- **User Authentication** pages (login/signup)
+- **User Authentication** with secure password hashing
 - **Checkout Process** with order summary
 - **Modern UI/UX** with smooth animations
 
@@ -55,12 +57,31 @@ nextjs-ecommerce/
    npm install
    ```
 
-3. **Run the development server:**
+3. **Set up environment variables:**
+   Create a `.env.local` file in the root directory with the following variables:
+   ```env
+   DATABASE_URL="your_postgresql_connection_string"
+   AUTH_SECRET="your_secret_key_here"
+   AUTH_URL="http://localhost:3000"
+   ```
+   
+   To generate an `AUTH_SECRET`, you can run:
+   ```bash
+   openssl rand -base64 32
+   ```
+
+4. **Set up the database:**
+   ```bash
+   npx prisma generate
+   npx prisma migrate dev
+   ```
+
+5. **Run the development server:**
    ```bash
    npm run dev
    ```
 
-4. **Open your browser and visit:**
+6. **Open your browser and visit:**
    ```
    http://localhost:3000
    ```
@@ -105,8 +126,10 @@ nextjs-ecommerce/
 - Tab-based authentication
 - Form validation
 - Password strength indicator
-- Social login options
+- Social login options (UI only)
 - Account benefits showcase
+- NextAuth v5 integration with credentials provider
+- User registration with bcrypt password hashing
 
 ### Checkout (`/checkout`)
 - Shopping cart review

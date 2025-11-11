@@ -1,0 +1,180 @@
+# Cursor Rules for Next.js E-commerce Project
+
+## DRY (Don't Repeat Yourself) Principles
+
+**Core Principle**: If you find yourself writing the same code twice, extract it into a reusable component, utility function, or shared module.
+
+### Code Reuse Guidelines
+1. **Components**: Create reusable components for repeated UI patterns
+2. **Utilities**: Extract common logic into utility functions in `@/lib/`
+3. **Hooks**: Create custom hooks for shared stateful logic
+4. **Constants**: Define shared constants, types, and configurations in dedicated files
+5. **Styles**: Use CSS variables and shared style modules instead of inline styles
+
+### When to Extract Code
+- ✅ Same code appears in 2+ places → Extract to utility/component
+- ✅ Similar logic with slight variations → Create parameterized function
+- ✅ Repeated patterns → Create reusable component
+- ✅ Shared types/interfaces → Create types file
+- ✅ Common validation logic → Extract to validation utilities
+
+## Project Structure
+- Next.js 15 with App Router
+- NextAuth v5 for authentication
+- Prisma with PostgreSQL
+- TypeScript throughout
+
+## Key Conventions
+
+### Navigation (DRY)
+- **ALWAYS** use the `Navigation` component from `@/components/Navigation`
+- **NEVER** duplicate navigation code in pages
+- **NEVER** create local navigation state - Navigation component handles everything
+- Cart count is managed centrally by Navigation component via events
+
+### Cart Management (DRY)
+- **ALWAYS** use `window.dispatchEvent(new Event('cartUpdated'))` to update cart count
+- **NEVER** use local `cartCount` state - Navigation handles it centrally
+- **NEVER** manually update cart count in multiple places
+- Extract cart operations to utilities if used in multiple places
+
+### Authentication (DRY)
+- **ALWAYS** use `checkAuthStatus()` from `@/lib/auth-client` for client-side auth checks
+- **ALWAYS** use `signOutUser()` from `@/lib/auth-client` for sign out
+- Server-side: **ALWAYS** use `auth()` from `@/lib/auth`
+- **NEVER** duplicate authentication logic - use the provided utilities
+
+### Database (DRY)
+- **ALWAYS** import Prisma from `lib/prisma.ts` (singleton pattern)
+- **NEVER** create new PrismaClient instances
+- **NEVER** import from `@prisma/client` directly - use `../generated/prisma/client` in `lib/prisma.ts`
+- Run `npx prisma generate` after schema changes
+
+### File Paths (DRY)
+- **ALWAYS** use `@/` alias for imports (configured in tsconfig.json)
+- Components: `@/components/`
+- Lib/Utilities: `@/lib/`
+- Types: `@/types/` or `types/`
+- App: relative paths or `@/app/`
+
+### Styling (DRY)
+- **ALWAYS** use CSS variables from `globals.css` for colors, spacing, etc.
+- **NEVER** hardcode colors, sizes, or spacing values
+- **NEVER** duplicate style definitions - use shared classes
+- Text alignment defaults to left (defined in globals.css)
+- Extract repeated style patterns to CSS classes or styled components
+
+### TypeScript (DRY)
+- **ALWAYS** type function parameters and return types
+- **ALWAYS** use interfaces/types for component props
+- **ALWAYS** share types across files - don't duplicate type definitions
+- Extend NextAuth types in `types/next-auth.d.ts`
+- Create shared type files for common interfaces
+
+### Form Handling (DRY)
+- Extract form validation logic to utilities
+- Create reusable form components for common patterns
+- Share form submission handlers when possible
+
+### API Routes (DRY)
+- Extract common error handling to utilities
+- Share validation logic across routes
+- Use middleware for common route concerns
+
+## Common Patterns (Reusable)
+
+### Adding to Cart
+```tsx
+// Standard pattern - use everywhere
+localStorage.setItem('ecommerce-cart', JSON.stringify(cartItems))
+window.dispatchEvent(new Event('cartUpdated'))
+```
+
+### Checking Auth Status
+```tsx
+// Use this utility - don't duplicate
+const { authenticated, user } = await checkAuthStatus()
+```
+
+### Using Navigation
+```tsx
+// Always use the component - never duplicate
+import Navigation from "@/components/Navigation"
+
+// In component return:
+<Navigation />
+```
+
+### Loading Cart from localStorage
+```tsx
+// Extract to utility if used in multiple places
+const loadCart = () => {
+  const savedCart = localStorage.getItem('ecommerce-cart')
+  return savedCart ? JSON.parse(savedCart) : []
+}
+```
+
+## Code Organization (DRY)
+
+### Component Structure
+- Create components in `@/components/` for reusable UI
+- Keep page-specific components in page directories only if truly unique
+- Extract shared logic from pages to components/utilities
+
+### Utility Functions
+- Place reusable functions in `@/lib/` with descriptive names
+- Group related utilities in the same file
+- Export utilities for reuse across the codebase
+
+### Constants and Configuration
+- Define constants in dedicated files (e.g., `@/lib/constants.ts`)
+- Use environment variables for configuration
+- Share configuration objects instead of duplicating
+
+## Anti-Patterns to Avoid (DRY Violations)
+
+- ❌ **Duplicating navigation code** - Always use Navigation component
+- ❌ **Using local `cartCount` state** - Navigation handles it centrally
+- ❌ **Duplicating authentication checks** - Use provided utilities
+- ❌ **Repeating form validation logic** - Extract to utilities
+- ❌ **Hardcoding values** - Use constants or CSS variables
+- ❌ **Duplicating type definitions** - Share types across files
+- ❌ **Repeating API error handling** - Extract to utilities
+- ❌ **Copy-pasting component code** - Create reusable components
+- ❌ **Duplicating style definitions** - Use CSS classes/variables
+- ❌ **Repeating business logic** - Extract to utility functions
+- ❌ **Importing Prisma from `@prisma/client`** - Use custom path via `lib/prisma.ts`
+- ❌ **Centering navigation text** - Use left alignment (defined in globals.css)
+
+## Refactoring Checklist
+
+Before committing code, ask:
+1. ✅ Is this code duplicated elsewhere? → Extract to shared location
+2. ✅ Can this logic be reused? → Create utility/component
+3. ✅ Are there hardcoded values? → Use constants/variables
+4. ✅ Is this type defined elsewhere? → Share the type definition
+5. ✅ Can this component be reused? → Move to components directory
+6. ✅ Is this validation logic repeated? → Extract to utility
+
+## File Organization
+
+```
+@/components/     - Reusable UI components
+@/lib/           - Utilities, helpers, shared logic
+@/lib/auth.ts    - Server-side auth (singleton)
+@/lib/auth-client.ts - Client-side auth utilities
+@/lib/prisma.ts  - Database client (singleton)
+@/types/         - Shared TypeScript types
+app/             - Pages and route handlers
+```
+
+## Best Practices
+
+1. **Single Source of Truth**: Each piece of logic should exist in one place
+2. **Reusability First**: Design components and functions to be reusable
+3. **Extract Early**: Don't wait for 3+ duplications - extract at 2
+4. **Shared Types**: Define types once, import everywhere
+5. **Centralized State**: Use shared state management for common data
+6. **Utility Functions**: Extract repeated logic to utilities
+7. **Component Composition**: Build complex UIs from simple, reusable components
+

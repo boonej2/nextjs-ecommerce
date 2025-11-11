@@ -1,21 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import Navigation from "@/components/Navigation"
+import Link from "next/link"
 
 export default function Contact() {
-  const [cartCount, setCartCount] = useState(0)
-  const [isNavOpen, setIsNavOpen] = useState(false)
-
-  useEffect(() => {
-    // Load cart count from localStorage
-    const savedCart = localStorage.getItem('ecommerce-cart')
-    if (savedCart) {
-      const cartItems = JSON.parse(savedCart)
-      const totalItems = cartItems.reduce((total: number, item: any) => total + item.quantity, 0)
-      setCartCount(totalItems)
-    }
-  }, [])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -70,41 +58,7 @@ export default function Contact() {
 
   return (
     <div>
-      {/* Navigation */}
-      <nav className="navbar">
-        <div className="nav-container">
-          <div className="nav-logo">
-            <Link href="/">Frostburg Clothing</Link>
-          </div>
-          <ul className={`nav-menu ${isNavOpen ? 'active' : ''}`}>
-            <li className="nav-item">
-              <Link href="/" className="nav-link" onClick={() => setIsNavOpen(false)}>Home</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/store" className="nav-link" onClick={() => setIsNavOpen(false)}>Store</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/about" className="nav-link" onClick={() => setIsNavOpen(false)}>About</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/contact" className="nav-link active" onClick={() => setIsNavOpen(false)}>Contact</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/login" className="nav-link" onClick={() => setIsNavOpen(false)}>Login</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/checkout" className="nav-link cart-icon" onClick={() => setIsNavOpen(false)}>
-                Cart <span id="cart-count">{cartCount}</span>
-              </Link>
-            </li>
-          </ul>
-          <div className={`hamburger ${isNavOpen ? 'active' : ''}`} onClick={() => setIsNavOpen(!isNavOpen)}>
-            <span className="bar"></span>
-            <span className="bar"></span>
-            <span className="bar"></span>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       {/* Contact Hero */}
       <section className="contact-hero">

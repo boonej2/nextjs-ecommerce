@@ -4,57 +4,42 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import ProductCard from '../components/ProductCard'
+import Navigation from '../components/Navigation'
 import { Product, getFeaturedProducts, getAllProducts } from '../lib/products'
+import { addToCart } from '../lib/cart-client'
 
 export default function Home() {
-  const [cartCount, setCartCount] = useState(0)
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([])
   const [randomFeaturedProduct, setRandomFeaturedProduct] = useState<Product | null>(null)
-  const [isNavOpen, setIsNavOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Load cart count from localStorage
-    const savedCart = localStorage.getItem('ecommerce-cart')
-    if (savedCart) {
-      const cartItems = JSON.parse(savedCart)
-      const totalItems = cartItems.reduce((total: number, item: any) => total + item.quantity, 0)
-      setCartCount(totalItems)
-    }
-    
-    // Load featured products
-    const featured = getFeaturedProducts(3)
-    setFeaturedProducts(featured)
-    
-    // Select random product for hero section (exclude already featured products)
-    const allProducts = getAllProducts()
-    const nonFeaturedProducts = allProducts.filter(product => 
-      !featured.some(featuredProduct => featuredProduct.id === product.id)
-    )
-    const randomIndex = Math.floor(Math.random() * nonFeaturedProducts.length)
-    setRandomFeaturedProduct(nonFeaturedProducts[randomIndex])
+    loadProducts()
   }, [])
 
-  const addToCart = (id: number, name: string, price: number) => {
-    const savedCart = localStorage.getItem('ecommerce-cart')
-    let cartItems = savedCart ? JSON.parse(savedCart) : []
-    
-    const existingItem = cartItems.find((item: any) => item.id === id.toString())
-    
-    if (existingItem) {
-      existingItem.quantity += 1
-    } else {
-      cartItems.push({
-        id: id.toString(),
-        name,
-        price,
-        quantity: 1
-      })
+  const loadProducts = async () => {
+    try {
+      setLoading(true)
+      // Load featured products
+      const featured = await getFeaturedProducts(3)
+      setFeaturedProducts(featured)
+      
+      // Select random product for hero section (exclude already featured products)
+      const allProducts = await getAllProducts()
+      const nonFeaturedProducts = allProducts.filter(product => 
+        !featured.some(featuredProduct => featuredProduct.id === product.id)
+      )
+      const randomIndex = Math.floor(Math.random() * nonFeaturedProducts.length)
+      setRandomFeaturedProduct(nonFeaturedProducts[randomIndex] || null)
+    } catch (error) {
+      console.error('Error loading products:', error)
+    } finally {
+      setLoading(false)
     }
-    
-    localStorage.setItem('ecommerce-cart', JSON.stringify(cartItems))
-    setCartCount(cartItems.reduce((total: number, item: any) => total + item.quantity, 0))
-    
-    // Show notification
+  }
+
+  const handleAddToCart = async (id: number, name: string, price: number) => {
+    await addToCart(id, name, price, 1)
     showNotification('Item added to cart!')
   }
 
@@ -97,41 +82,7 @@ export default function Home() {
 
   return (
     <div>
-      {/* Navigation */}
-      <nav className="navbar">
-        <div className="nav-container">
-          <div className="nav-logo">
-            <Link href="/">Frostburg Clothing</Link>
-          </div>
-          <ul className={`nav-menu ${isNavOpen ? 'active' : ''}`}>
-            <li className="nav-item">
-              <Link href="/" className="nav-link active" onClick={() => setIsNavOpen(false)}>Home</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/store" className="nav-link" onClick={() => setIsNavOpen(false)}>Store</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/about" className="nav-link" onClick={() => setIsNavOpen(false)}>About</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/contact" className="nav-link" onClick={() => setIsNavOpen(false)}>Contact</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/login" className="nav-link" onClick={() => setIsNavOpen(false)}>Login</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/checkout" className="nav-link cart-icon" onClick={() => setIsNavOpen(false)}>
-                Cart <span id="cart-count">{cartCount}</span>
-              </Link>
-            </li>
-          </ul>
-          <div className={`hamburger ${isNavOpen ? 'active' : ''}`} onClick={() => setIsNavOpen(!isNavOpen)}>
-            <span className="bar"></span>
-            <span className="bar"></span>
-            <span className="bar"></span>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       {/* Hero Section */}
       <section className="hero">
@@ -180,15 +131,21 @@ export default function Home() {
       <section className="featured-products">
         <div className="container">
           <h2 className="section-title">Featured Products</h2>
-          <div className="products-grid">
-            {featuredProducts.map(product => (
-              <ProductCard 
-                key={product.id}
-                product={product}
-                onAddToCart={addToCart}
-              />
-            ))}
-          </div>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '3rem' }}>
+              <p>Loading products...</p>
+            </div>
+          ) : (
+            <div className="products-grid">
+              {featuredProducts.map(product => (
+                <ProductCard 
+                  key={product.id}
+                  product={product}
+                  onAddToCart={handleAddToCart}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

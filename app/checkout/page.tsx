@@ -2,18 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-
-interface CartItem {
-  id: string
-  name: string
-  price: number
-  quantity: number
-  size?: string
-  color?: string
-}
+import Navigation from "@/components/Navigation"
+import { getCartItems, updateCartItemQuantity, removeCartItem, clearCart, CartItem } from "@/lib/cart-client"
 
 export default function Checkout() {
-  const [cartCount, setCartCount] = useState(0)
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [orderSummary, setOrderSummary] = useState({
     subtotal: 0,
@@ -22,18 +14,32 @@ export default function Checkout() {
     total: 0
   })
   const [isNavOpen, setIsNavOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadCart()
+    
+    // Listen for cart updates
+    const handleCartUpdate = () => {
+      loadCart()
+    }
+    
+    window.addEventListener('cartUpdated', handleCartUpdate)
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate)
+    }
   }, [])
 
-  const loadCart = () => {
-    const savedCart = localStorage.getItem('ecommerce-cart')
-    if (savedCart) {
-      const items = JSON.parse(savedCart)
+  const loadCart = async () => {
+    try {
+      setLoading(true)
+      const items = await getCartItems()
       setCartItems(items)
-      setCartCount(items.reduce((total: number, item: CartItem) => total + item.quantity, 0))
       calculateOrderSummary(items)
+    } catch (error) {
+      console.error('Error loading cart:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -51,24 +57,17 @@ export default function Checkout() {
     })
   }
 
-  const updateQuantity = (id: string, quantity: number) => {
-    const updatedItems = cartItems.map(item => 
-      item.id === id ? { ...item, quantity } : item
-    ).filter(item => item.quantity > 0)
-    
-    setCartItems(updatedItems)
-    localStorage.setItem('ecommerce-cart', JSON.stringify(updatedItems))
-    loadCart()
+  const handleUpdateQuantity = async (id: string, quantity: number) => {
+    await updateCartItemQuantity(id, quantity)
+    await loadCart()
   }
 
-  const removeItem = (id: string) => {
-    const updatedItems = cartItems.filter(item => item.id !== id)
-    setCartItems(updatedItems)
-    localStorage.setItem('ecommerce-cart', JSON.stringify(updatedItems))
-    loadCart()
+  const handleRemoveItem = async (id: string) => {
+    await removeCartItem(id)
+    await loadCart()
   }
 
-  const placeOrder = () => {
+  const placeOrder = async () => {
     if (cartItems.length === 0) {
       alert('Your cart is empty!')
       return
@@ -79,9 +78,8 @@ export default function Checkout() {
     alert(`Order placed successfully!\nOrder #${orderNumber}\nTotal: $${orderSummary.total.toFixed(2)}`)
     
     // Clear cart after successful order
+    await clearCart()
     setCartItems([])
-    localStorage.removeItem('ecommerce-cart')
-    setCartCount(0)
     
     // Redirect to home page
     setTimeout(() => {
@@ -155,38 +153,7 @@ export default function Checkout() {
 
   return (
     <div>
-      {/* Navigation */}
-      <nav className="navbar">
-        <div className="nav-container">
-          <div className="nav-logo">
-            <Link href="/">Frostburg Clothing</Link>
-          </div>
-          <ul className={`nav-menu ${isNavOpen ? 'active' : ''}`}>
-            <li className="nav-item">
-              <Link href="/" className="nav-link" onClick={() => setIsNavOpen(false)}>Home</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/store" className="nav-link" onClick={() => setIsNavOpen(false)}>Store</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/about" className="nav-link" onClick={() => setIsNavOpen(false)}>About</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/contact" className="nav-link" onClick={() => setIsNavOpen(false)}>Contact</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/checkout" className="nav-link cart-icon active" onClick={() => setIsNavOpen(false)}>
-                Cart <span id="cart-count">{cartCount}</span>
-              </Link>
-            </li>
-          </ul>
-          <div className={`hamburger ${isNavOpen ? 'active' : ''}`} onClick={() => setIsNavOpen(!isNavOpen)}>
-            <span className="bar"></span>
-            <span className="bar"></span>
-            <span className="bar"></span>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       {/* Checkout Hero */}
       <section className="checkout-hero">
@@ -200,7 +167,11 @@ export default function Checkout() {
       <section className="checkout-content">
         {/* Cart Items */}
         <div className="cart-items" id="cart-items">
-          {cartItems.length === 0 ? (
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '3rem' }}>
+              <p>Loading cart...</p>
+            </div>
+          ) : cartItems.length === 0 ? (
             <div className="empty-cart">
               <h3>Your cart is empty</h3>
               <p>Add some items to your cart to continue shopping.</p>
@@ -218,14 +189,14 @@ export default function Checkout() {
                   <div className="quantity-controls">
                     <button 
                       className="quantity-btn minus" 
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                      onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
                     >
                       -
                     </button>
                     <span className="quantity">{item.quantity}</span>
                     <button 
                       className="quantity-btn plus" 
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                      onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
                     >
                       +
                     </button>
@@ -233,7 +204,7 @@ export default function Checkout() {
                 </div>
                 <button 
                   className="remove-btn" 
-                  onClick={() => removeItem(item.id)}
+                  onClick={() => handleRemoveItem(item.id)}
                 >
                   Remove
                 </button>

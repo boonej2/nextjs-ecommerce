@@ -28,6 +28,12 @@ body {
     line-height: 1.6;
     color: var(--dark-color);
     background-color: var(--light-color);
+    text-align: left;
+}
+
+/* Ensure proper text alignment for all elements */
+h1, h2, h3, h4, h5, h6, p, span, div, a, li, ul, ol {
+    text-align: inherit;
 }
 
 .container {
@@ -67,6 +73,14 @@ body {
     display: flex;
     list-style: none;
     gap: 2rem;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
 }
 
 .nav-link {
@@ -75,6 +89,24 @@ body {
     font-weight: 500;
     transition: var(--transition);
     position: relative;
+    display: inline-block;
+    padding: 0.5rem 0;
+    text-align: left;
+}
+
+.nav-link.nav-user {
+    cursor: default;
+    font-weight: 600;
+}
+
+.nav-link.nav-signout {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem 0;
+    font-family: var(--font-primary);
+    font-size: inherit;
+    text-align: left;
 }
 
 .nav-link:hover,
@@ -1164,12 +1196,30 @@ body {
         flex-direction: column;
         background-color: white;
         width: 100%;
-        text-align: center;
+        text-align: left;
         transition: var(--transition);
         box-shadow: var(--box-shadow);
         padding: 2rem 0;
         max-height: calc(100vh - 70px);
         overflow-y: auto;
+        align-items: stretch;
+    }
+
+    .nav-item {
+        width: 100%;
+        padding: 0 2rem;
+    }
+
+    .nav-link {
+        width: 100%;
+        padding: 1rem 0;
+        display: block;
+        text-align: left;
+    }
+
+    .nav-link.nav-signout {
+        width: 100%;
+        text-align: left;
     }
 
     /* Featured Product Image Mobile Styles */

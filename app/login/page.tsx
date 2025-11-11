@@ -2,40 +2,161 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import Navigation from "@/components/Navigation"
+import { signInAction } from '@/app/actions/auth'
+import { checkAuthStatus, signOutUser } from '@/lib/auth-client'
 
 export default function Login() {
-  const [cartCount, setCartCount] = useState(0)
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState('login')
   const [passwordStrength, setPasswordStrength] = useState(0)
-  const [isNavOpen, setIsNavOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isSignupLoading, setIsSignupLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [user, setUser] = useState<{ id: string; email: string; name?: string | null } | null>(null)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
   useEffect(() => {
-    // Load cart count from localStorage
-    const savedCart = localStorage.getItem('ecommerce-cart')
-    if (savedCart) {
-      const cartItems = JSON.parse(savedCart)
-      const totalItems = cartItems.reduce((total: number, item: any) => total + item.quantity, 0)
-      setCartCount(totalItems)
-    }
+    // Check authentication status
+    checkAuthStatus().then(({ authenticated, user }) => {
+      if (authenticated && user) {
+        setUser(user)
+      }
+      setIsCheckingAuth(false)
+    })
   }, [])
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    alert('Login functionality would be implemented here!')
+  const handleSignOut = async () => {
+    const success = await signOutUser()
+    if (success) {
+      setUser(null)
+      setSuccess('Signed out successfully')
+      setTimeout(() => {
+        setSuccess(null)
+      }, 3000)
+    } else {
+      setError('Failed to sign out. Please try again.')
+    }
   }
 
-  const handleSignupSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsLoading(true)
+    setError(null)
+    setSuccess(null)
     const formData = new FormData(e.target as HTMLFormElement)
-    const password = formData.get('password')
-    const confirmPassword = formData.get('confirm-password')
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
     
-    if (password !== confirmPassword) {
-      alert('Passwords do not match!')
+    if (!email || !password) {
+      setError('Please fill in all fields')
+      setIsLoading(false)
       return
     }
     
-    alert('Account creation functionality would be implemented here!')
+    try {
+      // Use server action which handles CSRF automatically
+      const result = await signInAction(formData)
+      
+      // Debug: Log the result (remove in production)
+      console.log('signInAction result:', result)
+      
+      if (result?.error) {
+        setError(result.error === 'CredentialsSignin' ? 'Invalid email or password' : result.error)
+        setIsLoading(false)
+      } else if (result?.success) {
+        // Successful login - update user state and redirect
+        const authStatus = await checkAuthStatus()
+        if (authStatus.authenticated && authStatus.user) {
+          setUser(authStatus.user)
+        }
+        setSuccess('Login successful! Redirecting...')
+        setTimeout(() => {
+          router.push('/')
+          router.refresh()
+        }, 500)
+      } else {
+        // Debug: Log when we hit the else case
+        console.log('Unexpected result structure:', result)
+        setError('Authentication failed. Please try again.')
+        setIsLoading(false)
+      }
+    } catch (error) {
+      console.error('Login error:', error)
+      setError('An error occurred during login. Please try again.')
+      setIsLoading(false)
+    }
+  }
+
+  const handleSignupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSignupLoading(true)
+    setError(null)
+    setSuccess(null)
+    const formData = new FormData(e.target as HTMLFormElement)
+    const firstName = formData.get('firstname') as string
+    const lastName = formData.get('lastname') as string
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
+    const confirmPassword = formData.get('confirm-password') as string
+    
+    // Validation
+    if (!firstName || !lastName || !email || !password || !confirmPassword) {
+      setError('Please fill in all fields')
+      setIsSignupLoading(false)
+      return
+    }
+    
+    if (password !== confirmPassword) {
+      setError('Passwords do not match!')
+      setIsSignupLoading(false)
+      return
+    }
+    
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long')
+      setIsSignupLoading(false)
+      return
+    }
+    
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: `${firstName} ${lastName}`,
+          email,
+          password,
+        }),
+      })
+      
+      const data = await response.json()
+      
+      if (response.ok) {
+        setSuccess('Account created successfully! Signing you in...')
+        // Auto-login is handled by the registration route
+        // Check auth status and update user state
+        setTimeout(async () => {
+          const authStatus = await checkAuthStatus()
+          if (authStatus.authenticated && authStatus.user) {
+            setUser(authStatus.user)
+          }
+          router.push('/')
+          router.refresh()
+        }, 1000)
+      } else {
+        setError(data.error || 'Registration failed. Please try again.')
+        setIsSignupLoading(false)
+      }
+    } catch (error) {
+      console.error('Registration error:', error)
+      setError('An error occurred during registration. Please try again.')
+      setIsSignupLoading(false)
+    }
   }
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,41 +183,7 @@ export default function Login() {
 
   return (
     <div>
-      {/* Navigation */}
-      <nav className="navbar">
-        <div className="nav-container">
-          <div className="nav-logo">
-            <Link href="/">Frostburg Clothing</Link>
-          </div>
-          <ul className={`nav-menu ${isNavOpen ? 'active' : ''}`}>
-            <li className="nav-item">
-              <Link href="/" className="nav-link" onClick={() => setIsNavOpen(false)}>Home</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/store" className="nav-link" onClick={() => setIsNavOpen(false)}>Store</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/about" className="nav-link" onClick={() => setIsNavOpen(false)}>About</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/contact" className="nav-link" onClick={() => setIsNavOpen(false)}>Contact</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/login" className="nav-link active" onClick={() => setIsNavOpen(false)}>Login</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/checkout" className="nav-link cart-icon" onClick={() => setIsNavOpen(false)}>
-                Cart <span id="cart-count">{cartCount}</span>
-              </Link>
-            </li>
-          </ul>
-          <div className={`hamburger ${isNavOpen ? 'active' : ''}`} onClick={() => setIsNavOpen(!isNavOpen)}>
-            <span className="bar"></span>
-            <span className="bar"></span>
-            <span className="bar"></span>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       {/* Login/Signup Hero Section */}
       <section className="login-hero">
@@ -109,21 +196,63 @@ export default function Login() {
       {/* Login/Signup Form Section */}
       <section className="auth-section">
         <div className="container">
+          {isCheckingAuth ? (
+            <div style={{ textAlign: 'center', padding: '2rem' }}>
+              <p>Loading...</p>
+            </div>
+          ) : user ? (
+            <div className="auth-container" style={{ textAlign: 'center', padding: '3rem' }}>
+              <h2 style={{ marginBottom: '1rem' }}>Welcome back, {user.name || user.email}!</h2>
+              <p style={{ marginBottom: '2rem', color: 'var(--gray-color)' }}>
+                You are already signed in.
+              </p>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                <Link href="/" className="btn btn-primary">
+                  Go to Home
+                </Link>
+                <button onClick={handleSignOut} className="btn btn-outline">
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          ) : (
           <div className="auth-container">
             <div className="auth-tabs">
               <button 
                 className={`auth-tab ${activeTab === 'login' ? 'active' : ''}`} 
-                onClick={() => setActiveTab('login')}
+                onClick={() => {
+                  setActiveTab('login')
+                  setError(null)
+                  setSuccess(null)
+                }}
               >
                 Login
               </button>
               <button 
                 className={`auth-tab ${activeTab === 'signup' ? 'active' : ''}`} 
-                onClick={() => setActiveTab('signup')}
+                onClick={() => {
+                  setActiveTab('signup')
+                  setError(null)
+                  setSuccess(null)
+                }}
               >
                 Sign Up
               </button>
             </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="auth-message auth-error">
+                {error}
+              </div>
+            )}
+
+            {/* Success Message */}
+            {success && (
+              <div className="auth-message auth-success">
+                {success}
+              </div>
+            )}
 
             {/* Login Form */}
             <div className={`auth-form ${activeTab === 'login' ? 'active' : ''}`} id="login-form">
@@ -144,21 +273,12 @@ export default function Login() {
                   </label>
                   <a href="#" className="forgot-password">Forgot password?</a>
                 </div>
-                <button type="submit" className="btn btn-primary btn-full">Sign In</button>
+                <button type="submit" className="btn btn-primary btn-full" disabled={isLoading || isSignupLoading}>
+                  {isLoading ? 'Signing In...' : 'Sign In'}
+                </button>
               </form>
-              <div className="auth-divider">
-                <span>or continue with</span>
-              </div>
-              <div className="social-login">
-                <button type="button" className="btn btn-outline btn-social">
-                  <span className="social-icon">📱</span>
-                  Google
-                </button>
-                <button type="button" className="btn btn-outline btn-social">
-                  <span className="social-icon">📘</span>
-                  Facebook
-                </button>
-              </div>
+              
+              
             </div>
 
             {/* Signup Form */}
@@ -217,10 +337,13 @@ export default function Login() {
                     I agree to the <a href="#" className="link">Terms of Service</a> and <a href="#" className="link">Privacy Policy</a>
                   </label>
                 </div>
-                <button type="submit" className="btn btn-primary btn-full">Create Account</button>
+                <button type="submit" className="btn btn-primary btn-full" disabled={isLoading || isSignupLoading}>
+                  {isSignupLoading ? 'Creating Account...' : 'Create Account'}
+                </button>
               </form>
             </div>
           </div>
+          )}
         </div>
       </section>
 
@@ -355,6 +478,27 @@ export default function Login() {
         .auth-tab:hover:not(.active) {
           background: rgba(255, 255, 255, 0.5);
           color: var(--dark-color);
+        }
+
+        .auth-message {
+          padding: 1rem;
+          margin: 1rem 2rem 0;
+          border-radius: var(--border-radius);
+          font-size: 0.9rem;
+          font-weight: 500;
+          text-align: center;
+        }
+
+        .auth-error {
+          background-color: #fee;
+          color: #c33;
+          border: 1px solid #fcc;
+        }
+
+        .auth-success {
+          background-color: #efe;
+          color: #3c3;
+          border: 1px solid #cfc;
         }
 
         .auth-form {
@@ -718,8 +862,13 @@ export default function Login() {
           color: white;
         }
 
-        .btn-primary:hover {
+        .btn-primary:hover:not(:disabled) {
           background: var(--secondary-color);
+        }
+
+        .btn-primary:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
         .btn-outline {

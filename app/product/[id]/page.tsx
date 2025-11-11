@@ -5,69 +5,58 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
 import ProductCard from '../../../components/ProductCard'
-import { Product, productData, getProductById, getProductsByCategory } from '../../../lib/products'
+import Navigation from '../../../components/Navigation'
+import { Product, getProductById, getProductsByCategory } from '../../../lib/products'
+import { addToCart } from '../../../lib/cart-client'
 
 export default function ProductDetail() {
   const params = useParams()
   const productId = params.id as string
   
-  const [cartCount, setCartCount] = useState(0)
   const [product, setProduct] = useState<Product | null>(null)
   const [selectedSize, setSelectedSize] = useState('')
   const [selectedColor, setSelectedColor] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
-  const [isNavOpen, setIsNavOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Load cart count from localStorage
-    const savedCart = localStorage.getItem('ecommerce-cart')
-    if (savedCart) {
-      const cartItems = JSON.parse(savedCart)
-      const totalItems = cartItems.reduce((total: number, item: any) => total + item.quantity, 0)
-      setCartCount(totalItems)
-    }
-    
-    // Load product data
-    const foundProduct = getProductById(parseInt(productId))
-    setProduct(foundProduct || null)
-    
-    // Load related products
-    if (foundProduct) {
-      const related = getProductsByCategory(foundProduct.category)
-        .filter(p => p.id !== foundProduct.id)
-        .slice(0, 3)
-      setRelatedProducts(related)
-    }
+    loadProduct()
   }, [productId])
 
-  const addToCart = () => {
+  const loadProduct = async () => {
+    try {
+      setLoading(true)
+      const foundProduct = await getProductById(parseInt(productId))
+      setProduct(foundProduct)
+      
+      // Load related products
+      if (foundProduct) {
+        const related = await getProductsByCategory(foundProduct.category)
+        setRelatedProducts(
+          related
+            .filter(p => p.id !== foundProduct.id)
+            .slice(0, 3)
+        )
+      }
+    } catch (error) {
+      console.error('Error loading product:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddToCart = async () => {
     if (!product) return
     
-    const savedCart = localStorage.getItem('ecommerce-cart')
-    let cartItems = savedCart ? JSON.parse(savedCart) : []
-    
-    const existingItem = cartItems.find((item: any) => 
-      item.id === product.id.toString() && 
-      item.size === selectedSize && 
-      item.color === selectedColor
+    await addToCart(
+      product.id,
+      product.name,
+      product.price,
+      quantity,
+      selectedSize || undefined,
+      selectedColor || undefined
     )
-    
-    if (existingItem) {
-      existingItem.quantity += quantity
-    } else {
-      cartItems.push({
-        id: product.id.toString(),
-        name: product.name,
-        price: product.price,
-        quantity,
-        size: selectedSize,
-        color: selectedColor
-      })
-    }
-    
-    localStorage.setItem('ecommerce-cart', JSON.stringify(cartItems))
-    setCartCount(cartItems.reduce((total: number, item: any) => total + item.quantity, 0))
     
     showNotification('Item added to cart!')
   }
@@ -106,35 +95,25 @@ export default function ProductDetail() {
     }, 3000)
   }
 
+  if (loading) {
+    return (
+      <div>
+        <Navigation />
+        <section className="product-detail">
+          <div className="container">
+            <div style={{ textAlign: 'center', padding: '3rem' }}>
+              <p>Loading product...</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    )
+  }
+
   if (!product) {
     return (
       <div>
-        <nav className="navbar">
-          <div className="nav-container">
-            <div className="nav-logo">
-              <Link href="/">Frostburg Clothing</Link>
-            </div>
-            <ul className={`nav-menu ${isNavOpen ? 'active' : ''}`}>
-              <li className="nav-item">
-                <Link href="/" className="nav-link" onClick={() => setIsNavOpen(false)}>Home</Link>
-              </li>
-              <li className="nav-item">
-                <Link href="/store" className="nav-link" onClick={() => setIsNavOpen(false)}>Store</Link>
-              </li>
-              <li className="nav-item">
-                <Link href="/about" className="nav-link" onClick={() => setIsNavOpen(false)}>About</Link>
-              </li>
-              <li className="nav-item">
-                <Link href="/contact" className="nav-link" onClick={() => setIsNavOpen(false)}>Contact</Link>
-              </li>
-              <li className="nav-item">
-                <Link href="/checkout" className="nav-link cart-icon" onClick={() => setIsNavOpen(false)}>
-                  Cart <span id="cart-count">{cartCount}</span>
-                </Link>
-              </li>
-            </ul>
-          </div>
-        </nav>
+        <Navigation />
         <section className="product-detail">
           <div className="container">
             <div className="product-not-found">
@@ -150,38 +129,7 @@ export default function ProductDetail() {
 
   return (
     <div>
-      {/* Navigation */}
-      <nav className="navbar">
-        <div className="nav-container">
-          <div className="nav-logo">
-            <Link href="/">Frostburg Clothing</Link>
-          </div>
-          <ul className={`nav-menu ${isNavOpen ? 'active' : ''}`}>
-            <li className="nav-item">
-              <Link href="/" className="nav-link" onClick={() => setIsNavOpen(false)}>Home</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/store" className="nav-link" onClick={() => setIsNavOpen(false)}>Store</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/about" className="nav-link" onClick={() => setIsNavOpen(false)}>About</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/contact" className="nav-link" onClick={() => setIsNavOpen(false)}>Contact</Link>
-            </li>
-            <li className="nav-item">
-              <Link href="/checkout" className="nav-link cart-icon" onClick={() => setIsNavOpen(false)}>
-                Cart <span id="cart-count">{cartCount}</span>
-              </Link>
-            </li>
-          </ul>
-          <div className={`hamburger ${isNavOpen ? 'active' : ''}`} onClick={() => setIsNavOpen(!isNavOpen)}>
-            <span className="bar"></span>
-            <span className="bar"></span>
-            <span className="bar"></span>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       {/* Product Detail Section */}
       <section className="product-detail">
@@ -277,7 +225,7 @@ export default function ProductDetail() {
               <div className="product-actions">
                 <button 
                   className="btn btn-primary add-to-cart-btn"
-                  onClick={addToCart}
+                  onClick={handleAddToCart}
                   disabled={!selectedSize || !selectedColor}
                 >
                   Add to Cart
@@ -321,25 +269,8 @@ export default function ProductDetail() {
                 <ProductCard 
                   key={relatedProduct.id}
                   product={relatedProduct}
-                  onAddToCart={(id, name, price) => {
-                    const savedCart = localStorage.getItem('ecommerce-cart')
-                    let cartItems = savedCart ? JSON.parse(savedCart) : []
-                    
-                    const existingItem = cartItems.find((item: any) => item.id === id.toString())
-                    
-                    if (existingItem) {
-                      existingItem.quantity += 1
-                    } else {
-                      cartItems.push({
-                        id: id.toString(),
-                        name,
-                        price,
-                        quantity: 1
-                      })
-                    }
-                    
-                    localStorage.setItem('ecommerce-cart', JSON.stringify(cartItems))
-                    setCartCount(cartItems.reduce((total: number, item: any) => total + item.quantity, 0))
+                  onAddToCart={async (id, name, price) => {
+                    await addToCart(id, name, price, 1)
                     showNotification('Item added to cart!')
                   }}
                 />
