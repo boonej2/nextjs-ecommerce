@@ -4,7 +4,7 @@
   "description": "Frostburg Clothing - Premium Outdoor & Casual Wear - Next.js 15 App Router Version",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "db:seed": "npx tsx prisma/seed.ts",
