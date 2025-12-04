@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Navigation from "@/components/Navigation"
+import Footer from "@/components/Footer"
 import { getCartItems, updateCartItemQuantity, removeCartItem, clearCart, CartItem } from "@/lib/cart-client"
 
 export default function Checkout() {
@@ -354,42 +355,7 @@ export default function Checkout() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="footer">
-        <div className="container">
-          <div className="footer-content">
-            <div className="footer-section">
-              <h3>Frostburg Clothing</h3>
-              <p>Premium outdoor clothing and casual wear for the modern adventurer.</p>
-            </div>
-            <div className="footer-section">
-              <h4>Quick Links</h4>
-              <ul>
-                <li><Link href="/">Home</Link></li>
-                <li><Link href="/store">Store</Link></li>
-                <li><Link href="/about">About</Link></li>
-                <li><Link href="/contact">Contact</Link></li>
-              </ul>
-            </div>
-            <div className="footer-section">
-              <h4>Support</h4>
-              <ul>
-                <li><a href="#">Shipping Info</a></li>
-                <li><a href="#">Size Guide</a></li>
-                <li><a href="#">FAQs</a></li>
-              </ul>
-            </div>
-            <div className="footer-section">
-              <h4>Contact</h4>
-              <p>Email: support@frostburgclothing.com</p>
-              <p>Phone: (301) 420-6969</p>
-            </div>
-          </div>
-          <div className="footer-bottom">
-            <p>&copy; 2025 Frostburg Clothing. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }
